@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 
-from .models import Question
+from .models import Question, Choice
 
 
  
@@ -44,14 +44,14 @@ class QuestionMethodTests(TestCase):
 
 
 
-def create_question(question_test, days):
+def create_question(question_text, days):
 	"""
 	Creates a question with the given 'question_text' and published the 
 	given number of 'days' offset to now (negative for questions published
 	in the past, positive for question that have yet to be published).
 	"""
 	time = timezone.now() + datetime.timedelta(days=days)
-	return Question.object.create(question_test=question_text,
+	return Question.objects.create(question_text=question_text,
 									pub_date=time)
 
 class QuestionViewsTests(TestCase):
@@ -62,14 +62,14 @@ class QuestionViewsTests(TestCase):
 		response = self.client.get(reverse('polls:index'))
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response,"No polls are available.")
-		self.assertQuerysetEqual(response.context['late_question_list'], [])
+		self.assertQuerysetEqual(response.context['latest_question_list'], [])
 
 	def test_index_view_with_a_past_question(self):
 		"""
 		Question with a pub_date in the past should be displayed on the 
 		index page.
 		"""
-		create_questio(question_text="Past question.", days = - 30)
+		create_question(question_text="Past question.", days = -30)
 		response = self.client.get(reverse('polls:index'))
 		self.assertQuerysetEqual(
 			response.context['latest_question_list'],
@@ -96,7 +96,7 @@ class QuestionViewsTests(TestCase):
 		"""
 		create_question(question_text= "Past question.", days = -30)
 		create_question(question_text= "Future question.", days= 30)
-		reponse = self.client.get(reverse('polls:index'))
+		response = self.client.get(reverse('polls:index'))
 		self.assertQuerysetEqual(
 			response.context['latest_question_list'],
 			['<Question: Past question.>']
@@ -106,10 +106,10 @@ class QuestionViewsTests(TestCase):
 		"""
 		The question index page may display multiple question.
 		"""
-		create_question(question_test= "Past question 1.", days=-30)
+		create_question(question_text= "Past question 1.", days=-30)
 		create_question(question_text= "Past question 2.", days=-5)	
 		response = self.client.get(reverse('polls:index'))
-		self.assertQueryEqual(
+		self.assertQuerysetEqual(
 			response.context['latest_question_list'],
 			['<Question: Past question 2.>', '<Question: Past question 1.>']
 		)
@@ -131,9 +131,9 @@ class QuestionIndexDetailTests(TestCase):
 		The detail view of a question with a pub_date in the past should
 		display the question's text.
 		"""
-		past_question = create_question(question_text = 'Past Question.', days=5)
+		past_question = create_question(question_text = 'Past Question.', days=-5)
 		response = self.client.get(reverse('polls:detail', args=(past_question.id,)))
-		self.assertContains(response, past-question.question_text, status_code=200)
+		self.assertContains(response, past_question.question_text, status_code=200)
 		
 
 # Create your tests here.
